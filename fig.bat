@@ -10,6 +10,7 @@ if "%1"=="start" goto start
 if "%1"=="new"   goto new
 if "%1"=="edit"  goto edit
 if "%1"=="list"  goto list
+if "%1"=="stop" goto stop
 goto usage
 
 :init
@@ -57,6 +58,15 @@ set C=0
 for %%f in (figures\*.svg) do (set /a C+=1 & echo    %%~nf)
 if %C%==0 echo    (none yet)
 echo.
+goto end
+
+:stop
+echo [fig] Stopping watchers...
+taskkill /f /im python.exe /fi "windowtitle eq Inkscape-Opener*" >nul 2>&1
+taskkill /f /im python.exe /fi "windowtitle eq SVG-Exporter*" >nul 2>&1
+wmic process where "commandline like '%%inkscape_figures.py%%'" delete >nul 2>&1
+wmic process where "commandline like '%%watch_figures.py%%'" delete >nul 2>&1
+echo [fig] Done.
 goto end
 
 :usage

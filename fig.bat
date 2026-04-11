@@ -2,7 +2,7 @@
 setlocal
 set SD=%~dp0
 :: CHANGE THIS TO 'py' TO USE THE CORRECT VERSION
-set PY=py
+set PY=python
 
 if "%1"=="" goto usage
 if "%1"=="init"  goto init

@@ -57,7 +57,6 @@ def watch(tex):
     print(f"[watch] {tex.name}  (Ctrl-C to stop)\n")
 known = set(RE.findall(tex.read_text(encoding="utf-8", errors="ignore")))
 mtime = tex.stat().st_mtime
-time.sleep(2)  # wait for startup before monitoring
 while True: 
     try:
         time.sleep(0.4)

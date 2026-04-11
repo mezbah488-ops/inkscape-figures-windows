@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
+"""
+inkscape_figures.py - watches a .tex file for new \incfig{} commands
+and opens Inkscape automatically with a blank SVG template.
+"""
 import re, sys, time, subprocess
 from pathlib import Path
 from shutil import which
+
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
 INKSCAPE_OVERRIDE = ""
 
@@ -33,7 +40,7 @@ SVG = (
 RE = re.compile(r'\\incfig(?:\[.*?\])?\{([^}]+)\}')
 
 def fdir(tex): return tex.parent / "figures"
-def svg(tex, name): return fdir(tex) / (name + ".svg")
+def svg_path(tex, name): return fdir(tex) / (name + ".svg")
 
 def open_ink(s):
     if not INKSCAPE:
@@ -44,7 +51,7 @@ def open_ink(s):
 
 def create(tex, name, open_after=True):
     fdir(tex).mkdir(exist_ok=True)
-    s = svg(tex, name)
+    s = svg_path(tex, name)
     if not s.exists():
         s.write_text(SVG, encoding="utf-8")
         print(f"[create] figures/{name}.svg")
@@ -53,29 +60,44 @@ def create(tex, name, open_after=True):
     if open_after:
         open_ink(s)
 
+
+class TexHandler(FileSystemEventHandler):
+    def __init__(self, tex):
+        self.tex = tex
+        self.known = set(RE.findall(tex.read_text(encoding="utf-8", errors="ignore")))
+
+    def on_modified(self, event):
+        if Path(event.src_path).resolve() != self.tex:
+            return
+        cur = set(RE.findall(self.tex.read_text(encoding="utf-8", errors="ignore")))
+        for n in sorted(cur - self.known):
+            print(f"[detect] \\incfig{{{n}}}")
+            create(self.tex, n)
+        self.known = cur
+
+
 def watch(tex):
     tex = tex.resolve()
     if not tex.exists():
         sys.exit(f"[error] Not found: {tex}")
+
+    handler = TexHandler(tex)
+    observer = Observer()
+    observer.schedule(handler, str(tex.parent), recursive=False)
+    observer.start()
+
     print(f"[watch] {tex.name}  (Ctrl-C to stop)\n")
-    known = set(RE.findall(tex.read_text(encoding="utf-8", errors="ignore")))
-    mtime = tex.stat().st_mtime
-    time.sleep(2)
-    while True:
-        try:
-            time.sleep(0.4)
-            m = tex.stat().st_mtime
-            if m == mtime:
-                continue
-            mtime = m
-            cur = set(RE.findall(tex.read_text(encoding="utf-8", errors="ignore")))
-            for n in sorted(cur - known):
-                print(f"[detect] \\incfig{{{n}}}")
-                create(tex, n)
-            known = cur
-        except KeyboardInterrupt:
-            print("\n[watch] Stopped.")
-            break
+
+    try:
+        while True:
+            time.sleep(0.3)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        observer.stop()
+        observer.join()
+        print("\n[watch] Stopped.")
+
 
 def main():
     args = sys.argv[1:]
@@ -87,7 +109,7 @@ def main():
     elif cmd == "create":
         create(Path(rest[0]), rest[1])
     elif cmd == "edit":
-        s = svg(Path(rest[0]), rest[1])
+        s = svg_path(Path(rest[0]), rest[1])
         if not s.exists():
             sys.exit(f"[error] Not found: {s}")
         open_ink(s)

@@ -21,8 +21,8 @@ echo @echo off
 echo for %%%%f in ^(*.tex^) do set T=%%%%f
 echo if "%%T%%"=="" ^(echo [error] No .tex file found. ^& pause ^& exit /b^)
 echo echo [fig] Watching: %%T%%
-echo start /min "Inkscape-Opener" cmd /k %PY% "%SD%inkscape_figures.py" watch "%%T%%"
-echo start /min "SVG-Exporter"    cmd /k %PY% "%SD%watch_figures.py" figures
+echo start /min "Inkscape-Opener" cmd /c %PY% "%SD%inkscape_figures.py" watch "%%T%%"
+echo start /min "SVG-Exporter"    cmd /c %PY% "%SD%watch_figures.py" figures
 ) > start.bat
 echo [fig] Created start.bat
 echo.
